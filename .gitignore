@@ -1,1 +1,7 @@
 
+node_modules/
+android/
+dist/
+*.keystore
+*.jks
+keystore-base64.txt
