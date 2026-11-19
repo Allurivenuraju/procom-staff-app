@@ -1,4 +1,3 @@
-
 # Builds the PROCOM Service Desk Android app (Admin / Agent) on GitHub.
 #
 #  • Every push to main / manual run  → APK + AAB as downloadable "artifacts" (Actions → run → Artifacts)
@@ -48,8 +47,10 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Check Android SDK (already installed on GitHub's ubuntu runner)
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          ls "$ANDROID_HOME/platforms" | tail -3
 
       - name: Install packages
         run: npm install
