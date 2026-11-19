@@ -1,1 +1,129 @@
 
+# Builds the PROCOM Service Desk Android app (Admin / Agent) on GitHub.
+#
+#  • Every push to main / manual run  → APK + AAB as downloadable "artifacts" (Actions → run → Artifacts)
+#  • Push a tag like v1.0.3            → also creates a GitHub Release with the APK and AAB attached
+#
+#  Signing: add these repository secrets (Settings → Secrets and variables → Actions):
+#    ANDROID_KEYSTORE_BASE64   your .jks keystore, base64-encoded (see BUILD-ANDROID.md)
+#    ANDROID_KEYSTORE_PASSWORD keystore password
+#    ANDROID_KEY_ALIAS         key alias (e.g. procom)
+#    ANDROID_KEY_PASSWORD      key password
+#  Without these secrets the workflow still builds a DEBUG APK you can install for testing.
+#
+#  Push notifications (Firebase): add one more secret
+#    GOOGLE_SERVICES_JSON      the full contents of google-services.json from Firebase (paste as-is)
+#  Without it the app works normally, just without push notifications.
+
+name: Build Android app
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write   # needed to create a Release when a v* tag is pushed
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+      HAS_FIREBASE: ${{ secrets.GOOGLE_SERVICES_JSON != '' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install packages
+        run: npm install
+
+      - name: Turn on push notifications in the app (if Firebase secret is set)
+        if: env.HAS_FIREBASE == 'true'
+        run: |
+          sed -i -E "s/PUSH_ENABLED: *false/PUSH_ENABLED: true/" www/js/config.js
+          grep PUSH_ENABLED www/js/config.js
+
+      - name: Create Android project
+        run: |
+          if [ ! -d android ]; then npx cap add android; fi
+          npx capacitor-assets generate --android
+
+      - name: Add Firebase config (google-services.json)
+        if: env.HAS_FIREBASE == 'true'
+        env:
+          GSJ: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          printf '%s' "$GSJ" > android/app/google-services.json
+          # accept a base64-encoded secret too
+          if ! grep -q project_info android/app/google-services.json; then printf '%s' "$GSJ" | base64 --decode > android/app/google-services.json; fi
+          grep -q '"package_name": *"io.lueur.procomservice"' android/app/google-services.json || { echo "::error::google-services.json is not for package io.lueur.procomservice"; exit 1; }
+
+      - name: Copy app screens into Android project
+        run: npx cap sync android
+
+      - name: Set app version (versionCode = run number)
+        run: |
+          VERSION_NAME="1.0.${{ github.run_number }}"
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then VERSION_NAME="${GITHUB_REF#refs/tags/v}"; fi
+          sed -i -E "s/versionCode [0-9]+/versionCode ${{ github.run_number }}/" android/app/build.gradle
+          sed -i -E "s/versionName \"[^\"]*\"/versionName \"${VERSION_NAME}\"/" android/app/build.gradle
+          echo "VERSION_NAME=${VERSION_NAME}" >> $GITHUB_ENV
+          grep -E "versionCode|versionName" android/app/build.gradle
+
+      - name: Decode keystore
+        if: env.HAS_KEYSTORE == 'true'
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > "$RUNNER_TEMP/release.jks"
+
+      - name: Build signed release APK + AAB
+        if: env.HAS_KEYSTORE == 'true'
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease bundleRelease --no-daemon \
+            -Pandroid.injected.signing.store.file="$RUNNER_TEMP/release.jks" \
+            -Pandroid.injected.signing.store.password="${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+            -Pandroid.injected.signing.key.alias="${{ secrets.ANDROID_KEY_ALIAS }}" \
+            -Pandroid.injected.signing.key.password="${{ secrets.ANDROID_KEY_PASSWORD }}"
+          mkdir -p ../dist
+          cp app/build/outputs/apk/release/*.apk   "../dist/PROCOM-Service-Desk-${VERSION_NAME}.apk"
+          cp app/build/outputs/bundle/release/*.aab "../dist/PROCOM-Service-Desk-${VERSION_NAME}.aab"
+
+      - name: Build debug APK (no keystore secrets)
+        if: env.HAS_KEYSTORE != 'true'
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+          mkdir -p ../dist
+          cp app/build/outputs/apk/debug/*.apk "../dist/PROCOM-Service-Desk-${VERSION_NAME}-debug.apk"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: PROCOM-Service-Desk-${{ env.VERSION_NAME }}
+          path: dist/*
+          retention-days: 30
+
+      - name: Create GitHub Release (tags v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
