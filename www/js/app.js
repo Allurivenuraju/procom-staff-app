@@ -366,6 +366,20 @@
   }
 
   /* ---------- Push notifications (Firebase) ---------- */
+  function beep() {
+    try {
+      const A = window.AudioContext || window.webkitAudioContext; if (!A) return;
+      const ctx = beep.ctx || (beep.ctx = new A());
+      [0, 0.18].forEach((d, i) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine'; o.frequency.value = i ? 1175 : 880;
+        g.gain.setValueAtTime(0.0001, ctx.currentTime + d);
+        g.gain.exponentialRampToValueAtTime(0.35, ctx.currentTime + d + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + d + 0.16);
+        o.connect(g); g.connect(ctx.destination); o.start(ctx.currentTime + d); o.stop(ctx.currentTime + d + 0.18);
+      });
+    } catch (e) {}
+  }
   async function registerPush() {
     const PN = P.PushNotifications;
     if (!isNative || !CFG.PUSH_ENABLED || !PN || !store.token) return;
@@ -377,6 +391,8 @@
         });
         await PN.addListener('registrationError', e => console.warn('push registration error', e));
         await PN.addListener('pushNotificationReceived', n => {
+          // App is open: Android doesn't show the notification, so beep + vibrate + toast
+          beep(); try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch (e) {}
           toast((n.title || 'New update') + (n.body ? ' — ' + n.body : ''));
           state.dash = null; state.tickets.items = [];
           const r = route(); if (r.page === 'home' || r.page === 'tickets' || r.page === '') render();
@@ -386,7 +402,10 @@
           go(no ? '#/ticket/' + encodeURIComponent(no) : '#/home');
         });
       }
-      try { await PN.createChannel({ id: 'tickets', name: 'Tickets', description: 'New and updated service tickets', importance: 5, visibility: 1, sound: 'default', vibration: true }); } catch (e) {}
+      // No 'sound' key: Android then uses the phone's default notification sound.
+      // (sound:'default' would look for res/raw/default and make the channel silent.)
+      try { await PN.deleteChannel({ id: 'tickets' }); } catch (e) {}
+      try { await PN.createChannel({ id: 'ticket_alerts', name: 'Ticket alerts', description: 'New and updated service tickets', importance: 5, visibility: 1, vibration: true, lights: true, lightColor: '#2563EB' }); } catch (e) {}
       let perm = await PN.checkPermissions();
       if (perm.receive === 'prompt' || perm.receive === 'prompt-with-rationale') perm = await PN.requestPermissions();
       if (perm.receive === 'granted') await PN.register();
