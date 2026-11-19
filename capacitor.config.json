@@ -1,0 +1,36 @@
+{
+  "appId": "io.lueur.procomservice",
+  "appName": "PROCOM Service Desk",
+  "webDir": "www",
+  "android": {
+    "appendUserAgent": "ProcomServiceApp/1.0",
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "launchAutoHide": true,
+      "backgroundColor": "#0E2A5C",
+      "showSpinner": false,
+      "androidScaleType": "CENTER_CROP"
+    },
+    "StatusBar": {
+      "backgroundColor": "#0E2A5C",
+      "style": "DARK",
+      "overlaysWebView": false
+    },
+    "PushNotifications": {
+      "presentationOptions": [
+        "badge",
+        "sound",
+        "alert"
+      ]
+    },
+    "CapacitorHttp": {
+      "enabled": false
+    }
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}
