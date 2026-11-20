@@ -66,6 +66,38 @@ jobs:
           if [ ! -d android ]; then npx cap add android; fi
           npx capacitor-assets generate --android
 
+      - name: Splash screen - centred logo on black (no stretching)
+        run: |
+          RES=android/app/src/main/res
+          mkdir -p $RES/drawable-nodpi $RES/drawable $RES/values
+          cp resources/splash-logo.png $RES/drawable-nodpi/splash_logo.png
+          cp resources/splash-icon.png $RES/drawable-nodpi/splash_icon.png
+          cat > $RES/drawable/launch_splash.xml <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+              <item android:drawable="@android:color/black"/>
+              <item><bitmap android:src="@drawable/splash_logo" android:gravity="center"/></item>
+          </layer-list>
+          XML
+          sed -i 's/^          //' $RES/drawable/launch_splash.xml
+          python3 - <<'PY'
+          import re
+          p = 'android/app/src/main/res/values/styles.xml'
+          s = open(p).read()
+          s = s.replace('@drawable/splash<', '@drawable/launch_splash<')
+          m = re.search(r'(<style name="AppTheme.NoActionBarLaunch"[^>]*>)(.*?)(</style>)', s, re.S)
+          body = m.group(2)
+          add = ''
+          for k, v in [('windowSplashScreenBackground', '@android:color/black'),
+                       ('windowSplashScreenAnimatedIcon', '@drawable/splash_icon'),
+                       ('android:windowBackground', '@drawable/launch_splash')]:
+              if k not in body:
+                  add += f'\n        <item name="{k}">{v}</item>'
+          s = s[:m.end(2)] + add + '\n    ' + s[m.end(2):]
+          open(p, 'w').write(s)
+          print(s)
+          PY
+
       - name: Add Firebase config (google-services.json)
         if: env.HAS_FIREBASE == 'true'
         env:
