@@ -243,11 +243,13 @@
       <div class="card"><div class="card-b">
         <div class="d-head"><div><h2>${esc(t.customer)}</h2><div class="muted">Raised ${fullDate(t.created_at)} · ${when(t.created_at)}</div></div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">${pill(t.status)}${pri(t.priority)}</div></div>
-        <div class="actions">
+        ${t.links ? `<div class="actions">
           <a class="act" href="${esc(t.links.call)}">${ic('phone')}Call</a>
           <a class="act wa" href="${esc(t.links.whatsapp)}" target="_blank">${ic('wa')}WhatsApp</a>
           <a class="act" href="${esc(t.links.map)}" target="_blank">${ic('map')}Map</a>
-        </div>
+        </div>` : `<div class="actions off" aria-disabled="true">
+          <span class="act">${ic('phone')}Call</span><span class="act">${ic('wa')}WhatsApp</span><span class="act">${ic('map')}Map</span>
+        </div><div class="muted" style="font-size:12.5px;margin-top:8px;display:flex;gap:6px;align-items:center">${ic('lock').replace('class="i"','class="i" style="width:14px;height:14px"')}Ticket is closed — contact options are turned off.</div>`}
       </div></div>
       <div class="card"><div class="card-h"><h3>Details</h3></div><div class="card-b"><dl class="kv">
         <dt>Mobile</dt><dd>${esc(t.mobile)}</dd>
