@@ -149,3 +149,6 @@ textarea.in{min-height:90px;resize:vertical}
 .menu a,.menu button{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border-top:1px solid var(--line-2);color:var(--text);font-weight:600;text-align:left}
 .menu > :first-child{border-top:0}
 .menu .go{margin-left:auto;color:var(--faint)}
+
+.hello h2{overflow-wrap:anywhere}
+.tk-meta span{min-width:0;overflow-wrap:anywhere}
