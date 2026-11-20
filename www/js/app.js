@@ -37,6 +37,8 @@
     web: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
     alert: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5M12 16h.01"/>',
     check: '<path d="M5 12.5 10 17l9-10"/>',
+    eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+    eyeOff: '<path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6C3.8 8.4 2 12 2 12s3.5 7 10 7a9.6 9.6 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
     lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
   };
   const ic = n => `<svg class="i" viewBox="0 0 24 24">${icons[n] || ''}</svg>`;
@@ -110,17 +112,26 @@
   /* ---------- Login ---------- */
   function renderLogin() {
     $app.innerHTML = `<div class="login">
-      <div class="brand"><div class="mark">P</div><h1>PROCOM</h1><p>SERVICE DESK</p></div>
+      <div class="brand"><div class="mark"><img src="img/logo.png" alt=""></div><h1>PROCOM</h1><p>SERVICE DESK</p></div>
       <div class="card">
-        <h2>Staff sign in</h2><p class="muted" style="margin-bottom:16px">Admin or Agent account</p>
+        <h2 style="margin-bottom:16px">Sign in</h2>
         <div id="loginErr"></div>
         <form id="loginForm" novalidate>
           <div class="f"><label for="em">Email</label><input class="in" id="em" type="email" autocomplete="username" inputmode="email" required></div>
-          <div class="f"><label for="pw">Password</label><input class="in" id="pw" type="password" autocomplete="current-password" required></div>
+          <div class="f"><label for="pw">Password</label><div class="pw-wrap"><input class="in" id="pw" type="password" autocomplete="current-password" required>
+            <button type="button" class="pw-eye" id="pwEye" aria-label="Show password">${ic('eye')}</button></div></div>
           <button class="btn" id="loginBtn" type="submit">Sign in</button>
         </form>
       </div>
-      <p class="muted" style="text-align:center;margin-top:auto;padding-top:24px">© ${new Date().getFullYear()} PROCOM AUTOMATION · v${esc(CFG.VERSION)}</p></div>`;
+      <p class="muted" style="text-align:center;margin-top:auto;padding-top:24px">© ${new Date().getFullYear()} PROCOM AUTOMATION</p></div>`;
+    const eye = document.getElementById('pwEye'), pw = document.getElementById('pw');
+    eye.onclick = () => {
+      const show = pw.type === 'password';
+      pw.type = show ? 'text' : 'password';
+      eye.innerHTML = ic(show ? 'eyeOff' : 'eye');
+      eye.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+      pw.focus();
+    };
     document.getElementById('loginForm').onsubmit = async ev => {
       ev.preventDefault();
       const btn = document.getElementById('loginBtn'); btn.disabled = true; btn.textContent = 'Signing in…';
@@ -354,10 +365,10 @@
       <div class="card menu">
         <div style="display:flex;align-items:center;gap:12px;padding:14px 16px">${ic('bell')}<div style="flex:1"><div style="font-weight:600">Notifications</div>
           <div class="muted" id="pushState">${!CFG.PUSH_ENABLED ? 'Not set up in this app build' : (store.push ? 'On — you will get new ticket alerts' : 'Off — allow notifications for this app in phone settings')}</div></div></div>
-        <a href="${esc(CFG.WEB_ADMIN)}" target="_blank">${ic('web')}Open web admin panel<span class="go">›</span></a>
         <button id="logout" style="color:var(--red)">${ic('out')}Log out</button>
       </div>
-      <p class="muted" style="text-align:center;margin-top:18px">PROCOM Service Desk · v${esc(CFG.VERSION)}</p>`, { tab: 'profile' });
+      <p class="muted" style="text-align:center;margin-top:18px">PROCOM Service Desk · Version <span id="appVer">${esc(CFG.VERSION)}</span></p>`, { tab: 'profile' });
+    if (isNative && P.App && P.App.getInfo) P.App.getInfo().then(i => { const el = document.getElementById('appVer'); if (el && i && i.version) el.textContent = i.version + (i.build ? ' (' + i.build + ')' : ''); }).catch(() => {});
     document.getElementById('logout').onclick = async () => {
       if (!confirm('Log out of PROCOM Service Desk?')) return;
       try { await api('logout', { method: 'POST', body: { push_token: store.push } }); } catch (e) {}
