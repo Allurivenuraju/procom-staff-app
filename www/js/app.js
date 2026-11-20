@@ -169,7 +169,7 @@
       ? [['Open', d.open, 'Open', true], ['New', c.New, 'New'], ['In Progress', c['In Progress'], 'In Progress'], ['On Hold', c['On Hold'], 'On Hold']]
       : [['My open', d.open, 'Open', true], ['To start', c.Assigned + c.New, 'Assigned'], ['In Progress', c['In Progress'], 'In Progress'], ['Closed this month', d.closed_this_month, 'Closed']];
     const pc = { High: ['var(--red-soft)', 'var(--red)'], Medium: ['var(--amber-soft)', 'var(--amber)'], Low: ['var(--gray-soft)', 'var(--gray)'], none: ['var(--blue-soft)', 'var(--blue)'] };
-    return `<div class="hello"><h2>Hi ${esc((d.user.name || '').split(' ')[0])} 👋</h2><div class="sub">${admin ? 'Service desk overview' : 'Your tickets'}</div></div>
+    return `<div class="hello"><h2>Hi ${esc(d.user.name || '')} 👋</h2><div class="sub">${admin ? 'Service desk overview' : 'Your tickets'}</div></div>
       <div class="tiles">${tiles.map(t => `<a class="tile ${t[3] ? 'hl' : ''}" href="#/tickets" data-status="${esc(t[2])}"><span class="n">${t[1]}</span><span class="t">${esc(t[0])}</span></a>`).join('')}</div>
       <div class="card"><div class="card-h"><h3>Open by priority</h3></div><div class="card-b"><div class="prio">
         ${['High', 'Medium', 'Low', 'none'].map(p => `<div style="background:${pc[p][0]};color:${pc[p][1]}"><b>${d.priority[p]}</b><span>${p === 'none' ? 'Not set' : p}</span></div>`).join('')}
@@ -367,8 +367,8 @@
           <div class="muted" id="pushState">${!CFG.PUSH_ENABLED ? 'Not set up in this app build' : (store.push ? 'On — you will get new ticket alerts' : 'Off — allow notifications for this app in phone settings')}</div></div></div>
         <button id="logout" style="color:var(--red)">${ic('out')}Log out</button>
       </div>
-      <p class="muted" style="text-align:center;margin-top:18px">PROCOM Service Desk · Version <span id="appVer">${esc(CFG.VERSION)}</span></p>`, { tab: 'profile' });
-    if (isNative && P.App && P.App.getInfo) P.App.getInfo().then(i => { const el = document.getElementById('appVer'); if (el && i && i.version) el.textContent = i.version + (i.build ? ' (' + i.build + ')' : ''); }).catch(() => {});
+      <p class="muted" style="text-align:center;margin-top:18px">Version <span id="appVer">${esc(CFG.VERSION)}</span></p>`, { tab: 'profile' });
+    if (isNative && P.App && P.App.getInfo) P.App.getInfo().then(i => { const el = document.getElementById('appVer'); if (el && i && i.version) el.textContent = i.version; }).catch(() => {});
     document.getElementById('logout').onclick = async () => {
       if (!confirm('Log out of PROCOM Service Desk?')) return;
       try { await api('logout', { method: 'POST', body: { push_token: store.push } }); } catch (e) {}
